@@ -1,0 +1,108 @@
+```yaml
+microservices:
+  - name: UserManagementService
+    description: Manages user accounts, profiles, authentication, and authorization.
+    owner: User & Identity Team
+    lifecycle:
+      status: Planned
+      roadmap: Q3 2024 - Initial Development, Q4 2024 - API Integration, Q1 2025 - Production Release
+    endpoints:
+      - /api/users
+      - /api/auth
+      - /api/profiles
+
+  - name: MatchmakingService
+    description: Handles skill-based matchmaking, queuing players, and initiating game sessions.
+    owner: Core Game Logic Team
+    lifecycle:
+      status: Planned
+      roadmap: Q3 2024 - Algorithm Design, Q4 2024 - Implementation & Testing, Q1 2025 - Beta Testing
+    endpoints:
+      - /api/matchmaking/join
+      - /api/matchmaking/leave
+      - /api/matchmaking/status
+
+  - name: GameSessionService
+    description: Manages active game sessions, including game state, player connections, and real-time updates.
+    owner: Core Game Logic Team
+    lifecycle:
+      status: Planned
+      roadmap: Q3 2024 - Core Game Loop, Q4 2024 - Network Sync, Q1 2025 - Scalability Testing
+    endpoints:
+      - /api/game/create
+      - /api/game/{sessionId}/join
+      - /api/game/{sessionId}/state
+      - /api/game/{sessionId}/input
+
+  - name: PhysicsEngineService
+    description: Calculates realistic ball physics (spin, speed, bounce) and paddle interactions.
+    owner: Core Game Logic Team
+    lifecycle:
+      status: Planned
+      roadmap: Q3 2024 - Physics Model Design, Q4 2024 - Integration & Calibration, Q1 2025 - Performance Optimization
+    endpoints:
+      - /api/physics/simulate
+      - /api/physics/collide
+
+  - name: StatisticsService
+    description: Stores and retrieves player statistics, leaderboards, and match history.
+    owner: Data & Analytics Team
+    lifecycle:
+      status: Planned
+      roadmap: Q3 2024 - Database Design, Q4 2024 - Data Ingestion, Q1 2025 - Reporting APIs
+    endpoints:
+      - /api/stats/{userId}
+      - /api/leaderboards
+      - /api/matches/{matchId}/history
+
+  - name: CosmeticsService
+    description: Manages unlockable cosmetic items (avatars, paddles), inventory, and in-app purchases.
+    owner: Monetization & Content Team
+    lifecycle:
+      status: Planned
+      roadmap: Q4 2024 - Item Catalog, Q1 2025 - Inventory Management, Q2 2025 - Store Integration
+    endpoints:
+      - /api/cosmetics/catalog
+      - /api/cosmetics/inventory/{userId}
+      - /api/cosmetics/purchase
+
+  - name: NotificationService
+    description: Sends real-time notifications to players (e.g., match found, friend request, game updates).
+    owner: Platform & Infrastructure Team
+    lifecycle:
+      status: Planned
+      roadmap: Q4 2024 - Push Notification Integration, Q1 2025 - In-game Messaging, Q2 2025 - Email/SMS (optional)
+    endpoints:
+      - /api/notifications/{userId}
+      - /api/notifications/send
+
+  - name: GatewayService (API Gateway)
+    description: Single entry point for all client requests, handles routing, authentication, and rate limiting.
+    owner: Platform & Infrastructure Team
+    lifecycle:
+      status: Planned
+      roadmap: Q3 2024 - Initial Setup, Q4 2024 - Security & Monitoring, Q1 2025 - Production Readiness
+    endpoints:
+      - / (proxies to other services)
+
+  - name: SpectatorService
+    description: Enables real-time viewing of ongoing matches for spectators.
+    owner: Core Game Logic Team
+    lifecycle:
+      status: Planned
+      roadmap: Q1 2025 - Basic Spectating, Q2 2025 - Enhanced UI/Features, Q3 2025 - Performance Tuning
+    endpoints:
+      - /api/spectate/live
+      - /api/spectate/{sessionId}/stream
+
+  - name: ControlMappingService
+    description: Manages customizable control schemes and input processing for various devices.
+    owner: Frontend & UI Team (or Core Game Logic)
+    lifecycle:
+      status: Planned
+      roadmap: Q3 2024 - Web/Mobile Default Controls, Q4 2024 - User Customization, Q1 2025 - Device Adaptability
+    endpoints:
+      - /api/controls/{userId}
+      - /api/controls/default
+
+```
