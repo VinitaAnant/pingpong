@@ -1,0 +1,374 @@
+```yaml
+# Online Ping-Pong Game - Specification Document
+# Generated from PRD
+# Format: Logical entities and relationships in YAML
+
+entities:
+  - name: User
+    description: Represents an individual player of the game.
+    attributes:
+      - name: user_id
+        type: UUID
+        description: Unique identifier for the user.
+        primary_key: true
+      - name: username
+        type: String (max 50)
+        description: Unique display name for the user.
+        unique: true
+      - name: email
+        type: String (max 100)
+        description: User's email address (optional, for account recovery/notifications).
+        nullable: true
+        unique: true
+      - name: password_hash
+        type: String (secure hash)
+        description: Hashed password for user authentication.
+      - name: registration_timestamp
+        type: DateTime
+        description: Date and time when the user registered.
+      - name: last_login_timestamp
+        type: DateTime
+        description: Date and time of the user's last login.
+        nullable: true
+      - name: current_elo_rating
+        type: Integer
+        description: Player's Elo rating for skill-based matchmaking.
+        default: 1000 # Starting Elo
+      - name: avatar_id
+        type: UUID
+        description: Foreign key to the UserAvatar entity (current avatar).
+        nullable: true
+      - name: paddle_skin_id
+        type: UUID
+        description: Foreign key to the PaddleSkin entity (current paddle skin).
+        nullable: true
+
+  - name: GameMatch
+    description: Represents a single instance of a completed or ongoing ping-pong match.
+    attributes:
+      - name: match_id
+        type: UUID
+        description: Unique identifier for the match.
+        primary_key: true
+      - name: player1_user_id
+        type: UUID
+        description: Foreign key to User, representing the first player.
+        foreign_key: User
+      - name: player2_user_id
+        type: UUID
+        description: Foreign key to User, representing the second player.
+        foreign_key: User
+      - name: winner_user_id
+        type: UUID
+        description: Foreign key to User, representing the winner of the match.
+        nullable: true # Null for ongoing matches
+        foreign_key: User
+      - name: match_start_timestamp
+        type: DateTime
+        description: Date and time when the match started.
+      - name: match_end_timestamp
+        type: DateTime
+        description: Date and time when the match ended.
+        nullable: true # Null for ongoing matches
+      - name: player1_score
+        type: Integer
+        description: Score of player 1 at the end of the match.
+        nullable: true
+      - name: player2_score
+        type: Integer
+        description: Score of player 2 at the end of the match.
+        nullable: true
+      - name: status
+        type: Enum (PENDING, IN_PROGRESS, COMPLETED, ABANDONED)
+        description: Current status of the match.
+        default: PENDING
+      - name: match_duration_seconds
+        type: Integer
+        description: Total duration of the completed match in seconds.
+        nullable: true
+      - name: spectator_count
+        type: Integer
+        description: Number of active spectators for an ongoing match.
+        default: 0
+
+  - name: PlayerStat
+    description: Aggregated statistics for a user.
+    attributes:
+      - name: stat_id
+        type: UUID
+        description: Unique identifier for the stat record.
+        primary_key: true
+      - name: user_id
+        type: UUID
+        description: Foreign key to User.
+        foreign_key: User
+        unique: true # One stat record per user
+      - name: total_matches_played
+        type: Integer
+        description: Total number of matches played by the user.
+        default: 0
+      - name: total_wins
+        type: Integer
+        description: Total number of matches won by the user.
+        default: 0
+      - name: total_losses
+        type: Integer
+        description: Total number of matches lost by the user.
+        default: 0
+      - name: win_streak
+        type: Integer
+        description: Current consecutive wins.
+        default: 0
+      - name: loss_streak
+        type: Integer
+        description: Current consecutive losses.
+        default: 0
+      - name: highest_elo_achieved
+        type: Integer
+        description: The highest Elo rating ever achieved by the user.
+        default: 1000
+      - name: average_match_score
+        type: Decimal (5,2)
+        description: Average score per match (e.g., total points scored / matches played)
+        default: 0.00 # Placeholder, calculation might be more complex
+      - name: last_updated
+        type: DateTime
+        description: Timestamp of the last update to these stats.
+
+  - name: MatchmakingQueue
+    description: Represents a user waiting to be matched with an opponent.
+    attributes:
+      - name: queue_id
+        type: UUID
+        description: Unique identifier for the queue entry.
+        primary_key: true
+      - name: user_id
+        type: UUID
+        description: Foreign key to User, the user in the queue.
+        foreign_key: User
+        unique: true # A user can only be in matchmaking once
+      - name: entry_timestamp
+        type: DateTime
+        description: Date and time when the user entered the queue.
+      - name: desired_elo_range
+        type: Integer (e.g., +/- 100)
+        description: Optional, preferred Elo range for opponents.
+        nullable: true
+      - name: region
+        type: String (max 50)
+        description: User's geographical region for latency-based matching.
+        nullable: true
+
+  - name: Avatar
+    description: Defines available customizable avatars.
+    attributes:
+      - name: avatar_id
+        type: UUID
+        description: Unique identifier for the avatar.
+        primary_key: true
+      - name: name
+        type: String (max 50)
+        description: Display name of the avatar (e.g., "Classic Paddle Player").
+        unique: true
+      - name: description
+        type: String (max 255)
+        description: Brief description of the avatar.
+      - name: image_url
+        type: String (URL)
+        description: URL to the avatar image asset.
+      - name: rarity
+        type: Enum (COMMON, UNCOMMON, RARE, EPIC, LEGENDARY)
+        description: Rarity level of the avatar.
+        default: COMMON
+      - name: unlock_cost_currency
+        type: Integer
+        description: Cost to unlock this avatar in in-game currency.
+        default: 0 # Free by default
+
+  - name: PaddleSkin
+    description: Defines available customizable paddle skins.
+    attributes:
+      - name: paddle_skin_id
+        type: UUID
+        description: Unique identifier for the paddle skin.
+        primary_key: true
+      - name: name
+        type: String (max 50)
+        description: Display name of the paddle skin (e.g., "Neon Green Paddle").
+        unique: true
+      - name: description
+        type: String (max 255)
+        description: Brief description of the paddle skin.
+      - name: texture_url
+        type: String (URL)
+        description: URL to the paddle texture asset.
+      - name: rarity
+        type: Enum (COMMON, UNCOMMON, RARE, EPIC, LEGENDARY)
+        description: Rarity level of the paddle skin.
+        default: COMMON
+      - name: unlock_cost_currency
+        type: Integer
+        description: Cost to unlock this paddle skin in in-game currency.
+        default: 0 # Free by default
+
+  - name: UserOwnedCosmetic
+    description: Represents a cosmetic item (avatar or paddle skin) owned by a user.
+    attributes:
+      - name: user_owned_cosmetic_id
+        type: UUID
+        description: Unique identifier for the owned cosmetic record.
+        primary_key: true
+      - name: user_id
+        type: UUID
+        description: Foreign key to User.
+        foreign_key: User
+      - name: cosmetic_type
+        type: Enum (AVATAR, PADDLE_SKIN)
+        description: Type of cosmetic item.
+      - name: cosmetic_item_id
+        type: UUID
+        description: Foreign key to either Avatar or PaddleSkin, depending on cosmetic_type.
+        # Note: This would typically be a generic ID, requiring application logic
+        # to determine which table to join. A more normalized approach might
+        # have separate tables for UserOwnedAvatars and UserOwnedPaddleSkins.
+      - name: acquisition_timestamp
+        type: DateTime
+        description: Date and time when the user acquired this cosmetic.
+      - name: is_equipped
+        type: Boolean
+        description: True if this specific item is currently equipped by the user.
+        default: false
+
+  - name: InGameCurrencyTransaction
+    description: Records purchases of in-game cosmetic items with in-game currency.
+    attributes:
+      - name: transaction_id
+        type: UUID
+        description: Unique identifier for the transaction.
+        primary_key: true
+      - name: user_id
+        type: UUID
+        description: Foreign key to User, who made the purchase.
+        foreign_key: User
+      - name: cosmetic_item_id
+        type: UUID
+        description: Foreign key to the Avatar or PaddleSkin that was purchased.
+      - name: cosmetic_type
+        type: Enum (AVATAR, PADDLE_SKIN)
+        description: Type of item purchased.
+      - name: amount_spent
+        type: Integer
+        description: Amount of in-game currency spent on this item.
+      - name: transaction_timestamp
+        type: DateTime
+        description: Date and time of the transaction.
+      - name: status
+        type: Enum (SUCCESS, FAILED)
+        description: Status of the transaction.
+
+  - name: GameServer
+    description: Represents a game server instance hosting live matches.
+    attributes:
+      - name: server_id
+        type: UUID
+        description: Unique identifier for the game server.
+        primary_key: true
+      - name: region
+        type: String (max 50)
+        description: Geographical region where the server is located.
+      - name: ip_address
+        type: String (IPv4/IPv6)
+        description: IP address of the game server.
+      - name: port
+        type: Integer
+        description: Port number for connecting to the server.
+      - name: current_load
+        type: Integer
+        description: Current number of active matches/players on the server.
+      - name: max_capacity
+        type: Integer
+        description: Maximum number of matches/players the server can handle.
+      - name: status
+        type: Enum (ONLINE, OFFLINE, MAINTENANCE)
+        description: Current operational status of the server.
+        default: ONLINE
+
+relationships:
+  - name: User_has_Avatar
+    from_entity: User
+    to_entity: Avatar
+    type: One-to-One (Optional)
+    description: A user can equip one current avatar.
+    # Note: The actual ownership is managed by UserOwnedCosmetic.
+    # This relationship is via User.avatar_id pointing to Avatar.avatar_id.
+
+  - name: User_has_PaddleSkin
+    from_entity: User
+    to_entity: PaddleSkin
+    type: One-to-One (Optional)
+    description: A user can equip one current paddle skin.
+    # Note: The actual ownership is managed by UserOwnedCosmetic.
+    # This relationship is via User.paddle_skin_id pointing to PaddleSkin.paddle_skin_id.
+
+  - name: User_plays_GameMatch
+    from_entity: User
+    to_entity: GameMatch
+    type: Many-to-Many (via player1_user_id and player2_user_id attributes)
+    description: A user can participate in multiple game matches.
+
+  - name: User_wins_GameMatch
+    from_entity: User
+    to_entity: GameMatch
+    type: One-to-Many (via winner_user_id attribute)
+    description: A user can be the winner of multiple game matches.
+
+  - name: User_has_PlayerStats
+    from_entity: User
+    to_entity: PlayerStat
+    type: One-to-One
+    description: Each user has exactly one set of player statistics.
+
+  - name: User_enters_MatchmakingQueue
+    from_entity: User
+    to_entity: MatchmakingQueue
+    type: One-to-One (Optional)
+    description: A user can be in the matchmaking queue at any given time.
+
+  - name: User_owns_Cosmetics
+    from_entity: User
+    to_entity: UserOwnedCosmetic
+    type: One-to-Many
+    description: A user can own multiple cosmetic items (avatars, paddle skins).
+
+  - name: Avatar_is_OwnedBy_User
+    from_entity: Avatar
+    to_entity: UserOwnedCosmetic
+    type: One-to-Many
+    description: An avatar can be owned by multiple users. (Indirect via cosmetic_item_id)
+
+  - name: PaddleSkin_is_OwnedBy_User
+    from_entity: PaddleSkin
+    to_entity: UserOwnedCosmetic
+    type: One-to-Many
+    description: A paddle skin can be owned by multiple users. (Indirect via cosmetic_item_id)
+
+  - name: User_makes_Transactions
+    from_entity: User
+    to_entity: InGameCurrencyTransaction
+    type: One-to-Many
+    description: A user can make multiple in-game currency transactions.
+
+  - name: Cosmetic_is_PurchasedIn_Transaction
+    from_entity: Avatar # or PaddleSkin
+    to_entity: InGameCurrencyTransaction
+    type: One-to-Many
+    description: A cosmetic item can be purchased in multiple transactions. (Indirect via cosmetic_item_id)
+
+  - name: GameMatch_hostedBy_GameServer
+    from_entity: GameMatch
+    to_entity: GameServer
+    type: Many-to-One
+    description: A game match is hosted by exactly one game server. (Implied, would add server_id to GameMatch entity if explicitly storing live server info per match)
+    # Note: Not explicitly defined in PRD, but a logical necessity for real-time multiplayer.
+    # Adding 'server_id' (UUID, FK to GameServer, nullable) to GameMatch would solidify this relationship.
+```
