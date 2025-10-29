@@ -1,0 +1,316 @@
+```yaml
+# Environment Variables Schema for Online Ping-Pong Game
+
+# This schema defines the expected environment variables for configuring
+# different aspects of the Online Ping-Pong Game application.
+# It uses YAML format for clarity and readability.
+
+# --- Core Application Configuration ---
+APP:
+  # The name of the application.
+  NAME:
+    type: string
+    description: "The name of the application."
+    default: "Online Ping-Pong Game"
+  # The environment in which the application is running (e.g., development, staging, production).
+  ENV:
+    type: string
+    description: "The environment in which the application is running."
+    enum: ["development", "staging", "production", "test"]
+    default: "development"
+  # The port on which the main application server will listen for HTTP/HTTPS requests.
+  PORT:
+    type: integer
+    description: "The port on which the main application server will listen."
+    default: 3000
+    min: 0
+    max: 65535
+  # The base URL for the frontend application, used for CORS or redirect purposes.
+  FRONTEND_URL:
+    type: string
+    description: "The base URL for the frontend application."
+    pattern: "^https?://.*$" # Ensures it's a valid URL format
+    required: true
+
+# --- Database Configuration ---
+DATABASE:
+  # The type of database being used (e.g., PostgreSQL, MongoDB).
+  TYPE:
+    type: string
+    description: "The type of database to connect to."
+    enum: ["POSTGRES", "MYSQL", "MONGODB"] # Extend as needed
+    default: "POSTGRES"
+  # The hostname or IP address of the database server.
+  HOST:
+    type: string
+    description: "The hostname or IP address of the database server."
+    default: "localhost"
+  # The port on which the database server is listening.
+  PORT:
+    type: integer
+    description: "The port on which the database server is listening."
+    default: 5432 # Default for PostgreSQL
+    min: 0
+    max: 65535
+  # The name of the database to connect to.
+  NAME:
+    type: string
+    description: "The name of the database to connect to."
+    required: true
+  # The username for database authentication.
+  USERNAME:
+    type: string
+    description: "The username for database authentication."
+    required: true
+  # The password for database authentication.
+  PASSWORD:
+    type: string
+    description: "The password for database authentication."
+    secret: true # Marks as sensitive information
+    required: true
+  # Whether to synchronize the database schema automatically (should be false in production).
+  SYNCHRONIZE:
+    type: boolean
+    description: "Whether to synchronize the database schema automatically."
+    default: false
+
+# --- Authentication Configuration ---
+AUTH:
+  # JWT secret key for signing and verifying tokens.
+  JWT_SECRET:
+    type: string
+    description: "Secret key for JWT token signing."
+    secret: true
+    required: true
+  # Expiration time for JWT access tokens (e.g., "15m", "1h", "7d").
+  JWT_EXPIRES_IN:
+    type: string
+    description: "Expiration time for JWT access tokens."
+    default: "1h"
+  # Expiration time for JWT refresh tokens.
+  JWT_REFRESH_EXPIRES_IN:
+    type: string
+    description: "Expiration time for JWT refresh tokens."
+    default: "7d"
+  # Algorithm used for hashing user passwords.
+  PASSWORD_HASH_ALGORITHM:
+    type: string
+    description: "Algorithm used for hashing user passwords."
+    enum: ["BCRYPT", "SCRYPT"] # Example algorithms
+    default: "BCRYPT"
+  # Salt rounds for password hashing (if using algorithms like bcrypt).
+  PASSWORD_SALT_ROUNDS:
+    type: integer
+    description: "Salt rounds for password hashing."
+    default: 10
+    min: 8
+    max: 15
+
+# --- Real-time Communication (WebSockets) Configuration ---
+WEBSOCKETS:
+  # The API key or token for the WebSocket service (if using an external one like Pusher, Socket.io Cloud).
+  API_KEY:
+    type: string
+    description: "API key for the WebSocket service (if applicable)."
+    secret: true
+    nullable: true
+  # The secret for the WebSocket service (if applicable).
+  SECRET_KEY:
+    type: string
+    description: "Secret key for the WebSocket service (if applicable)."
+    secret: true
+    nullable: true
+  # The URL or endpoint for the WebSocket server.
+  URL:
+    type: string
+    description: "The URL or endpoint for the WebSocket server."
+    pattern: "^wss?://.*$" # Ensures it's a valid WebSocket URL format
+    required: true
+
+# --- External API Integrations (e.g., for analytics, logging, monetization) ---
+EXTERNAL_API:
+  # Logging service API key (e.g., for Sentry, Loggly).
+  LOGGING_API_KEY:
+    type: string
+    description: "API key for an external logging service."
+    secret: true
+    nullable: true
+  # Analytics service tracking ID (e.g., Google Analytics, Mixpanel).
+  ANALYTICS_TRACKING_ID:
+    type: string
+    description: "Tracking ID for an external analytics service."
+    nullable: true
+  # Monetization platform API key (if applicable, e.g., Stripe, PayPal).
+  MONETIZATION_API_KEY:
+    type: string
+    description: "API key for a monetization platform."
+    secret: true
+    nullable: true
+  # Monetization platform webhook secret (for validating callbacks).
+  MONETIZATION_WEBHOOK_SECRET:
+    type: string
+    description: "Webhook secret for a monetization platform."
+    secret: true
+    nullable: true
+
+# --- Game Logic Configuration ---
+GAME_CONFIG:
+  # The maximum number of players allowed in a single match (should be 2 for 1v1).
+  MAX_PLAYERS_PER_MATCH:
+    type: integer
+    description: "Maximum number of players in a single match."
+    default: 2
+    min: 2
+    max: 2 # Enforcing 1v1 as per PRD
+  # The initial score required to win a standard match.
+  SCORE_TO_WIN:
+    type: integer
+    description: "The score required to win a standard match."
+    default: 11
+    min: 5
+  # The duration of the matchmaking timeout in seconds.
+  MATCHMAKING_TIMEOUT_SECONDS:
+    type: integer
+    description: "Duration before matchmaking attempt times out."
+    default: 60
+    min: 10
+  # The base Elo/ranking adjustment factor (K-factor) for skill rating updates.
+  ELO_K_FACTOR:
+    type: integer
+    description: "Base K-factor for Elo rating adjustments."
+    default: 32
+    min: 10
+    max: 50
+  # The initial Elo rating assigned to new players.
+  ELO_INITIAL_RATING:
+    type: integer
+    description: "Initial Elo rating for new players."
+    default: 1200
+    min: 100
+  # The tick rate of the physics engine or game state updates in milliseconds.
+  PHYSICS_TICK_RATE_MS:
+    type: integer
+    description: "Tick rate of the physics engine in milliseconds."
+    default: 16 # Approximately 60 FPS (1000ms / 60fps)
+    min: 1
+    max: 100
+
+# --- Caching Configuration (e.g., Redis) ---
+CACHE:
+  # Flag to enable/disable caching.
+  ENABLED:
+    type: boolean
+    description: "Whether caching is enabled."
+    default: false
+  # Type of caching system (e.g., REDIS).
+  TYPE:
+    type: string
+    description: "The type of caching system to use."
+    enum: ["REDIS"] # Extend as needed
+    nullable: true
+  # Hostname or IP address of the cache server.
+  HOST:
+    type: string
+    description: "Hostname or IP address of the cache server."
+    nullable: true
+  # Port of the cache server.
+  PORT:
+    type: integer
+    description: "Port of the cache server."
+    default: 6379 # Default for Redis
+    min: 0
+    max: 65535
+  # Password for cache server authentication.
+  PASSWORD:
+    type: string
+    description: "Password for cache server authentication."
+    secret: true
+    nullable: true
+  # Default Time-To-Live (TTL) for cached items in seconds.
+  DEFAULT_TTL_SECONDS:
+    type: integer
+    description: "Default Time-To-Live for cached items in seconds."
+    default: 3600 # 1 hour
+    min: 60
+
+# --- Cloud Storage Configuration (e.g., for user avatars, game assets) ---
+CLOUD_STORAGE:
+  # Flag to enable/disable cloud storage.
+  ENABLED:
+    type: boolean
+    description: "Whether cloud storage is enabled."
+    default: false
+  # Provider for cloud storage (e.g., AWS_S3, GCP_CLOUD_STORAGE).
+  PROVIDER:
+    type: string
+    description: "Cloud storage provider."
+    enum: ["AWS_S3", "GCP_CLOUD_STORAGE"] # Extend as needed
+    nullable: true
+  # Access key ID or client ID for cloud storage.
+  ACCESS_KEY_ID:
+    type: string
+    description: "Access key ID for cloud storage."
+    secret: true
+    nullable: true
+  # Secret access key or private key for cloud storage.
+  SECRET_ACCESS_KEY:
+    type: string
+    description: "Secret access key for cloud storage."
+    secret: true
+    nullable: true
+  # Region for cloud storage (e.g., "us-east-1").
+  REGION:
+    type: string
+    description: "Region for cloud storage bucket."
+    nullable: true
+  # Name of the storage bucket.
+  BUCKET_NAME:
+    type: string
+    description: "Name of the storage bucket."
+    nullable: true
+
+# --- CORS (Cross-Origin Resource Sharing) Configuration ---
+CORS:
+  # List of allowed origins for CORS, comma-separated. Use "*" for all (not recommended for production).
+  ALLOWED_ORIGINS:
+    type: string
+    description: "Comma-separated list of allowed origins for CORS."
+    default: "*"
+  # Whether to allow credentials (e.g., cookies, authorization headers) in CORS requests.
+  ALLOW_CREDENTIALS:
+    type: boolean
+    description: "Whether to allow credentials in CORS requests."
+    default: true
+  # List of allowed HTTP methods for CORS, comma-separated.
+  ALLOWED_METHODS:
+    type: string
+    description: "Comma-separated list of allowed HTTP methods for CORS."
+    default: "GET,HEAD,PUT,PATCH,POST,DELETE"
+  # List of allowed HTTP headers for CORS, comma-separated.
+  ALLOWED_HEADERS:
+    type: string
+    description: "Comma-separated list of allowed HTTP headers for CORS."
+    default: "Content-Type,Authorization"
+
+# --- Monitoring & Logging Configuration ---
+MONITORING:
+  # Level of logging (e.g., "info", "warn", "error", "debug").
+  LOG_LEVEL:
+    type: string
+    description: "The minimum level of logs to record."
+    enum: ["debug", "info", "warn", "error", "silent"]
+    default: "info"
+  # Whether to enable detailed performance metrics collection.
+  METRICS_ENABLED:
+    type: boolean
+    description: "Whether to enable detailed performance metrics collection."
+    default: false
+  # Port for Prometheus metrics endpoint (if enabled).
+  METRICS_PORT:
+    type: integer
+    description: "Port for Prometheus metrics endpoint."
+    default: 9000
+    min: 0
+    max: 65535
+    nullable: true
+```
