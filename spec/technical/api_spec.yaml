@@ -1,0 +1,766 @@
+```yaml
+openapi: 3.0.0
+info:
+  title: Online Ping-Pong Game API
+  version: 1.0.0
+  description: API for the online multiplayer ping-pong game, enabling real-time matches, user management, and game statistics.
+
+servers:
+  - url: https://api.pingponggame.com/v1
+    description: Production server
+  - url: https://dev.api.pingponggame.com/v1
+    description: Development server
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Authentication
+    description: User authentication and session management
+  - name: Users
+    description: User profile and management operations
+  - name: Matches
+    description: Matchmaking and game session management
+  - name: Stats
+    description: Player statistics and leaderboards
+  - name: Customization
+    description: Avatar and paddle customization
+  - name: Spectate
+    description: Spectator mode operations
+
+paths:
+  /auth/register:
+    post:
+      summary: Register a new user
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - email
+                - password
+              properties:
+                username:
+                  type: string
+                  description: Unique username for the player
+                  minLength: 3
+                  maxLength: 20
+                email:
+                  type: string
+                  format: email
+                  description: User's email address
+                password:
+                  type: string
+                  description: User's password
+                  minLength: 8
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccess'
+        '400':
+          description: Invalid input (e.g., username/email already taken, weak password)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /auth/login:
+    post:
+      summary: Authenticate user and get a session token
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - identifier
+                - password
+              properties:
+                identifier:
+                  type: string
+                  description: Username or email
+                password:
+                  type: string
+                  description: User's password
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccess'
+        '401':
+          description: Unauthorized (invalid credentials)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /auth/logout:
+    post:
+      summary: Invalidate current session token
+      tags:
+        - Authentication
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Logged out successfully
+        '401':
+          description: Unauthorized (invalid or missing token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /users/{userId}:
+    get:
+      summary: Get a user's profile
+      tags:
+        - Users
+      parameters:
+        - in: path
+          name: userId
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: The ID of the user to retrieve
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      summary: Update a user's profile (e.g., username, email, avatar preferences)
+      tags:
+        - Users
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: userId
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: The ID of the user to update. Must match authenticated user's ID.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  minLength: 3
+                  maxLength: 20
+                email:
+                  type: string
+                  format: email
+                # Add other updatable profile fields (e.g., preferred paddle, avatar, privacy settings)
+              example:
+                username: new_player_name
+                email: new_email@example.com
+      responses:
+        '200':
+          description: User profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '400':
+          description: Invalid input or data conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized (not the owner of the profile)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /matchmaking/join:
+    post:
+      summary: Request to join the matchmaking queue
+      tags:
+        - Matches
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                mode:
+                  type: string
+                  enum: [ "ranked", "casual" ]
+                  default: "casual"
+                  description: Game mode preference
+                players:
+                  type: integer
+                  default: 2
+                  description: Number of players for the match (currently only 2 supported)
+              example:
+                mode: ranked
+      responses:
+        '202':
+          description: User added to matchmaking queue. Expect a WebSocket connection or polling for match status.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Added to matchmaking queue.
+                  queueId:
+                    type: string
+                    format: uuid
+                    description: Identifier for the user's position in the queue.
+        '400':
+          description: Invalid request (e.g., already in queue)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /matchmaking/leave:
+    post:
+      summary: Request to leave the matchmaking queue
+      tags:
+        - Matches
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User removed from matchmaking queue
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Removed from matchmaking queue.
+        '400':
+          description: User not in queue
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /matches/{matchId}/connect:
+    post:
+      summary: Establish WebSocket connection for a game (after matchmaking finds a match)
+      tags:
+        - Matches
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: matchId
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: The ID of the match to connect to
+      responses:
+        '200':
+          description: WebSocket connection successful. Returns endpoint for real-time game data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  websocketUrl:
+                    type: string
+                    format: uri
+                    example: wss://game.pingponggame.com/ws/match/{matchId}?token=jwt_token
+        '401':
+          description: Unauthorized (not a participant in this match)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Match not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /stats/player/{userId}:
+    get:
+      summary: Get a player's statistics
+      tags:
+        - Stats
+      parameters:
+        - in: path
+          name: userId
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: The ID of the user whose stats to retrieve
+      responses:
+        '200':
+          description: Player statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerStats'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /stats/leaderboard:
+    get:
+      summary: Get the global leaderboard
+      tags:
+        - Stats
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 100
+          description: Number of entries to return
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+          description: Offset for pagination
+      responses:
+        '200':
+          description: Leaderboard retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LeaderboardEntry'
+  /customization/items:
+    get:
+      summary: Get available cosmetic items (paddles, avatars)
+      tags:
+        - Customization
+      responses:
+        '200':
+          description: List of available cosmetic items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CosmeticItem'
+  /customization/unlock:
+    post:
+      summary: Unlock a cosmetic item
+      tags:
+        - Customization
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - itemId
+              properties:
+                itemId:
+                  type: string
+                  format: uuid
+                  description: The ID of the cosmetic item to unlock
+      responses:
+        '200':
+          description: Item unlocked successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Item unlocked.
+        '400':
+          description: Item already unlocked or insufficient currency/requirements
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Item not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /customization/equip:
+    post:
+      summary: Equip a cosmetic item
+      tags:
+        - Customization
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - itemId
+              properties:
+                itemId:
+                  type: string
+                  format: uuid
+                  description: The ID of the cosmetic item to equip
+                itemType:
+                  type: string
+                  enum: [ "avatar", "paddle" ]
+                  description: The type of item being equipped
+      responses:
+        '200':
+          description: Item equipped successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Item equipped.
+        '400':
+          description: Item not owned by user or invalid item type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Item not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /spectate/available:
+    get:
+      summary: Get a list of currently ongoing matches available for spectating
+      tags:
+        - Spectate
+      responses:
+        '200':
+          description: List of spectatable matches
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SpectatableMatch'
+  /spectate/{matchId}/watch:
+    post:
+      summary: Request to spectate a specific match
+      tags:
+        - Spectate
+      security:
+        - bearerAuth: [] # Spectators might still need to be authenticated users
+      parameters:
+        - in: path
+          name: matchId
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: The ID of the match to spectate
+      responses:
+        '200':
+          description: WebSocket connection successful for spectating.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  websocketUrl:
+                    type: string
+                    format: uri
+                    example: wss://spectate.pingponggame.com/ws/spectate/{matchId}?token=jwt_token
+        '404':
+          description: Match not found or not spectatable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized (if spectating requires authentication)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    AuthSuccess:
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWT authentication token
+        userId:
+          type: string
+          format: uuid
+          description: The ID of the authenticated user
+        username:
+          type: string
+          description: The username of the authenticated user
+      example:
+        token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        userId: 123e4567-e89b-12d3-a456-426614174000
+        username: playerOne
+
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: string
+          description: A unique error code
+        message:
+          type: string
+          description: A human-readable error message
+      example:
+        code: USER_ALREADY_EXISTS
+        message: The provided username or email is already in use.
+
+    UserProfile:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        avatarUrl:
+          type: string
+          format: uri
+          nullable: true
+        equippedPaddleId:
+          type: string
+          format: uuid
+          nullable: true
+        eloRating:
+          type: integer
+          description: Skill-based rating
+        # Add other relevant profile info like friends list, achievements, etc.
+      example:
+        userId: 123e4567-e89b-12d3-a456-426614174000
+        username: PingMaster
+        email: ping.master@example.com
+        avatarUrl: https://cdn.pingponggame.com/avatars/default.png
+        equippedPaddleId: a23b4567-c89d-12e3-f456-426614174001
+        eloRating: 1500
+
+    PlayerStats:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        username:
+          type: string
+        wins:
+          type: integer
+          minimum: 0
+        losses:
+          type: integer
+          minimum: 0
+        totalMatches:
+          type: integer
+          minimum: 0
+        winRate:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        eloRating:
+          type: integer
+        longestWinStreak:
+          type: integer
+        totalPointsScored:
+          type: integer
+        # Add more granular stats like average match duration, serves made, etc.
+      example:
+        userId: 123e4567-e89b-12d3-a456-426614174000
+        username: PingMaster
+        wins: 150
+        losses: 75
+        totalMatches: 225
+        winRate: 0.666
+        eloRating: 1620
+        longestWinStreak: 12
+        totalPointsScored: 2500
+
+    LeaderboardEntry:
+      type: object
+      properties:
+        rank:
+          type: integer
+          description: Player's rank on the leaderboard
+        userId:
+          type: string
+          format: uuid
+        username:
+          type: string
+        eloRating:
+          type: integer
+          description: Player's ELO rating
+        wins:
+          type: integer
+        losses:
+          type: integer
+      example:
+        rank: 1
+        userId: abcde123-ijkl-mnop-qrst-uvwxyzabcdef
+        username: TopTierPlayer
+        eloRating: 2200
+        wins: 500
+        losses: 50
+
+    CosmeticItem:
+      type: object
+      properties:
+        itemId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        type:
+          type: string
+          enum: [ "avatar", "paddle" ]
+        description:
+          type: string
+        imageUrl:
+          type: string
+          format: uri
+        priceCurrency:
+          type: string
+          nullable: true
+          description: E.g., "coins", "diamonds", or null if unlockable via achievement
+        priceAmount:
+          type: integer
+          nullable: true
+        unlockRequirement:
+          type: string
+          nullable: true
+          description: E.g., "Win 50 ranked matches"
+      example:
+        itemId: f123g456-h789-i012-j345-6789abcdef01
+        name: Golden Paddle
+        type: paddle
+        description: A paddle forged in the fires of victory, providing no in-game advantage.
+        imageUrl: https://cdn.pingponggame.com/cosmetics/golden_paddle.png
+        priceCurrency: coins
+        priceAmount: 1000
+        unlockRequirement: null
+
+    SpectatableMatch:
+      type: object
+      properties:
+        matchId:
+          type: string
+          format: uuid
+        player1Name:
+          type: string
+        player2Name:
+          type: string
+        player1Elo:
+          type: integer
+        player2Elo:
+          type: integer
+        score:
+          type: string
+          example: "5-3"
+        status:
+          type: string
+          enum: [ "playing", "starting" ]
+        spectators:
+          type: integer
+      example:
+        matchId: d123e456-f789-g012-h345-6789abcdef02
+        player1Name: AceServer
+        player2Name: BackhandKing
+        player1Elo: 1750
+        player2Elo: 1800
+        score: "8-7"
+        status: playing
+        spectators: 15
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+```
