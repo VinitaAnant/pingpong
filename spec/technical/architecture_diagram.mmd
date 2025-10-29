@@ -1,0 +1,67 @@
+```mermaid
+graph TD
+    subgraph Client Tier
+        C[Web Browser / Mobile App] -- WebSocket/HTTP --> GSLB(Global Server Load Balancer)
+    end
+
+    subgraph Server Tier
+        subgraph Load Balancing & Edge
+            GSLB -- distribute traffic --> ELB(Elastic Load Balancer)
+            ELB -- distribute traffic --> WG(Web Gateway / API Gateway)
+        end
+
+        subgraph Core Services
+            WG --> MM(Matchmaking Service)
+            WG --> GM(Game Manager Service)
+            WG --> PS(Player Profile Service)
+            WG --> CS(Cosmetic Service)
+            WG --> SM(Spectator Service)
+            WG --> Auth(Authentication Service)
+            WG --> Notif(Notification Service - Optional) 
+        end
+
+        subgraph Game Servers
+            MM -- request game server --> GMS(Game Server Manager)
+            GMS -- provision/assign --> GS_Pool(Game Server Pool)
+            GS_Pool --> GS1[Game Server 1]
+            GS_Pool --> GS2[Game Server 2]
+            GS_Pool --> GS_N[Game Server N]
+            GS1 -- Birectional WebSocket --> C
+            GS2 -- Birectional WebSocket --> C
+            GS_N -- Birectional WebSocket --> C
+        end
+
+        subgraph Data Stores
+            Auth --> DB_Users[User Database (e.g., PostgreSQL)]
+            PS --> DB_PlayerStats[Player Stats Database (e.g., PostgreSQL)]
+            CS --> DB_Cosmetics[Cosmetics Database (e.g., MongoDB/NoSQL)]
+            GM --> DB_GameStates[Game State Database (e.g., Redis/NoSQL for low latency)]
+            MM --> DB_Matchmaking[Matchmaking Queue (e.g., Redis)]
+            DB_PlayerStats -- analytics --> BI_Tools(Business Intelligence Tools)
+            DB_GameStates -- logging --> Log_Agg(Log Aggregation - e.g., ELK Stack)
+        end
+
+        subgraph Supporting Services
+            Log_Agg --> Monitoring(Monitoring & Alerting - e.g., Prometheus, Grafana)
+            BI_Tools --> Dashboard(Admin Dashboard)
+            S_C(Spectator Client) -- WebSocket --> SM
+        end
+    end
+
+    subgraph External Integrations
+        Auth -- 3rd Party OAuth --> OAuth_Providers(Google, Facebook, etc.)
+    end
+
+    classDef service fill:#f9f,stroke:#333,stroke-width:2px;
+    class Auth,MM,GM,PS,CS,SM,GMS,GS1,GS2,GS_N service;
+    classDef database fill:#ccf,stroke:#333,stroke-width:2px;
+    class DB_Users,DB_PlayerStats,DB_Cosmetics,DB_GameStates,DB_Matchmaking database;
+    classDef client fill:#ffc,stroke:#333,stroke-width:2px;
+    class C,S_C client;
+    classDef edge fill:#cff,stroke:#333,stroke-width:2px;
+    class GSLB,ELB,WG edge;
+    classDef support fill:#cdc,stroke:#333,stroke-width:2px;
+    class Log_Agg,Monitoring,BI_Tools,Dashboard support;
+    classDef external fill:#eee,stroke:#333,stroke-width:2px;
+    class OAuth_Providers external;
+```
